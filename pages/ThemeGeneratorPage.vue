@@ -61,7 +61,7 @@
             v-card-text
               kbd {{ themeExport }}
             v-card-actions
-              v-btn(block color="grey white--text" flat @click.native="useNames = !useNames") Use {{ useNames && 'hex codes' || 'names' }} 
+              v-btn(block color="grey white--text" flat @click.native="useNames = !useNames") Use {{ useNames && 'hex codes' || 'names' }}
               v-btn(block color="blue darken-2 white--text" flat @click.native="dialog = false") Close
 
 </template>
@@ -162,18 +162,16 @@
       }
     },
 
-    beforeDestroy () {
+    beforeRouteEnter (to, from, next) {
+      next(vm => {
+        setTimeout(() => (vm.drawer = true), 400)
+      })
+    },
+
+    beforeRouteLeave (to, from, next) {
       this.drawer = false
       this.$vuetify.theme = this.backupTheme
-    },
-
-    created () {
-      this.backupTheme = Object.assign({}, this.$vuetify.theme)
-      this.$vuetify.theme = this.theme
-    },
-
-    mounted () {
-      setTimeout(() => (this.drawer = true), 400)
+      next()
     }
   }
 </script>

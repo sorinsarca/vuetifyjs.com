@@ -16,10 +16,12 @@ const release = process.env.RELEASE
 
 // Function to create routes
 // Is default lazy but can be changed
-function route (path, view) {
+function route (path, view, fullscreen, props) {
   return {
     path: path,
-    meta: meta[path],
+    meta: Object.assign({ fullscreen }, meta[path]),
+    name: view,
+    props,
     component: () => import(
       /* webpackChunkName: "routes" */
       /* webpackMode: "lazy-once" */
@@ -29,41 +31,50 @@ function route (path, view) {
 }
 
 const routes = paths.map(path => {
-  return route(`${path.shift()}`, path)
+  return route(...path)
 })
 
-export function createRouter () {
-    const router = new Router({
-      base: release ? `/releases/${release}` : __dirname,
-      mode: release ? 'hash' : 'history',
-      scrollBehavior,
-      routes: [
-        {
-          path: '/:lang([a-z]{2,3}|[a-z]{2,3}-[a-zA-Z]{4}|[a-z]{2,3}-[A-Z]{2,3})',
-          component: () => import(/* webpackChunkName: "routes" */'@/components/views/RootView.vue'),
-          props: route => ({ lang: route.params.lang }),
-          children: routes
-        },
-        {
-          path: '*',
-          // TODO: use current language (localstorage?)
-          redirect: to => `/en${to.path}`
-        }
-      ]
-    })
-
-    Vue.use(VueAnalytics, {
-      id: 'UA-75262397-3',
-      router,
-      autoTracking: {
-        page: process.env.NODE_ENV !== 'development'
+export function createRouter (store) {
+  const router = new Router({
+    base: release ? `/releases/${release}` : __dirname,
+    mode: release ? 'hash' : 'history',
+    scrollBehavior,
+    routes: [
+      {
+        path: '/:lang([a-z]{2,3}|[a-z]{2,3}-[a-zA-Z]{4}|[a-z]{2,3}-[A-Z]{2,3})',
+        component: () => import(/* webpackChunkName: "routes" */'@/components/views/RootView.vue'),
+        props: route => ({ lang: route.params.lang }),
+        children: routes
       },
-      debug: false ? {
-        enabled: true,
-        trace: false,
-        sendHitTask: true
-      } : false
-    })
+      {
+        path: '*',
+        // TODO: use current language (localstorage?)
+        redirect: to => `/en${to.path}`
+      }
+    ]
+  })
 
-    return router
+  router.beforeEach((to, from, next) => {
+    if (to.meta.fullscreen && !from.meta.fullscreen) {
+      store.commit('app/FULLSCREEN', true)
+    } else if (from.meta.fullscreen && !to.meta.fullscreen) {
+      store.commit('app/FULLSCREEN', false)
+    }
+    next()
+  })
+
+  Vue.use(VueAnalytics, {
+    id: 'UA-75262397-3',
+    router,
+    autoTracking: {
+      page: process.env.NODE_ENV !== 'development'
+    },
+    debug: false ? {
+      enabled: true,
+      trace: false,
+      sendHitTask: true
+    } : false
+  })
+
+  return router
 }
